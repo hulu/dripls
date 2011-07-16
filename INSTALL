@@ -1,0 +1,36 @@
+DripLS
+
+Prerequisites
+==================
+
+Currently DripLS runs on linux based systems, as it makes use of iptables/netem.
+In future it is possible to enable DripLS to run on BSD based distros via ipfw.
+
+Basic Installation
+==================
+
+To setup DripLS :
+
+1. Make sure iptables is available and kernel is compiled with netem support.
+   This should be the default on most linux systems.
+
+2. Make sure the user running the service has sudo rights
+
+3. Install nginx
+
+4. Copy the configuration sites for nginx from conf/nginx/. Make sure to include
+   them in the nginx config.
+   
+5. Execute fab local deploy so that DripLS can setup its components, or make a new 
+   target in the deploy/fabfile for the remote server on which to deploy Dripls
+
+6. ps aux | grep dripls on the target server to verify the app is running
+
+7. curl "http://<dripls-host>/master.m3u8?authkey=sample&cid=wt&r=650k.s0~e404" and
+   make sure there is a valid response
+
+Custom Adapter
+==================
+To extend the DripLS functionally to handle specifics of your HTL server, extend
+HttplsProvider in conf/data.py
+

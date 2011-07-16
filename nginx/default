@@ -1,0 +1,26 @@
+# You may add here your
+# server {
+#	...
+# }
+# statements for each of your virtual hosts
+
+server {
+
+	listen   80; ## listen for ipv4
+	listen   [::]:80 default ipv6only=on; ## listen for ipv6
+
+	server_name  localhost;
+
+	access_log  /var/log/nginx/localhost.access.log;
+
+	location / {
+            proxy_pass http://dripls.hulu.com:8080;
+	}
+  
+	location /s {
+            proxy_pass http://localhost:8011; # errors out, maybe there is a better way to error
+	}
+ 
+        include sites-available/default-locations;
+}
+

@@ -1,0 +1,12 @@
+#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=4000000,RESOLUTION=1280x720
+http://dripls.hulu.com/playlist.m3u8?p=wt_4000k&cdn=b
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=4000000,RESOLUTION=1280x720
+http://dripls.hulu.com/playlist.m3u8?p=wt_4000k&cdn=a
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=1000000,RESOLUTION=1280x720
+http://dripls.hulu.com/playlist.m3u8?p=wt_1000k&cdn=a
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=1000000,RESOLUTION=1280x720
+http://dripls.hulu.com/playlist.m3u8?p=wt_1000k&cdn=b
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=1700000,RESOLUTION=1280x720
+http://dripls.hulu.com/playlist.m3u8?p=wt_1700k&cdn=a
