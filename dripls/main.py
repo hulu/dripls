@@ -133,6 +133,7 @@ app_config = {
          'tools.staticdir.dir': os.path.join(shaper.shaper_store_path, 'playlists'),
          'tools.staticdir.content_types': {
              'ts': 'video/mp2t',
+             'wvm': 'text/plain',
              'm3u8': 'application/vnd.apple.mpegurl'
          }
     }
@@ -140,6 +141,7 @@ app_config = {
     
 cherrypy.config.update({
     'log.error_file': conf.error_log,
+    'log.access_file': conf.access_log,
     'log.screen': True
 })
 

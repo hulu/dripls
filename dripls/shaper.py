@@ -9,6 +9,7 @@ import urlparse
 import urllib2
 import uuid
 import hashlib
+import re
 
 import conf.data
 import conf
@@ -209,7 +210,7 @@ def update_shaped_segment(url, rule_action, mock_shape_segment=False):
     
     port = port_regex.group(0).replace("/s/","").rstrip('/')
     (traffic_limit, traffic_loss) = parse_net_rule_action(rule_action)
-    log.logging("{0} {1}".format(traffic_limit , traffic_loss))
+    logging.debug("{0} {1}".format(traffic_limit , traffic_loss))
     call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment)
 
 def cache_and_shape(master_playlist, seeded_content_id, rules):

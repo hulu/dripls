@@ -11,6 +11,7 @@ thread_pool = 10
 bin_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "bin")
 pidfile = os.path.join(bin_path, "dripls.pid")
 error_log = os.path.join(bin_path, "error_log.log")
+access_log = os.path.join(bin_path, "access_log.log")
 
 app = {
   'root_url': cherrypy.url()
