@@ -16,10 +16,13 @@ To setup DripLS :
 
 2. Make sure the user running the service has sudo rights
 
-3. Install nginx
+3. Install nginx or apache to use as a reverse proxy. Note that nginx does not
+   support HTTP/1.1 as a proxy_pass, thus byte range requests would not be 
+   properly supported. 
 
 4. Copy the configuration sites for nginx from conf/nginx/. Make sure to include
-   them in the nginx config.
+   them in the nginx config. If using apache, use conf/apache/ configs and place
+   tem under /etc/apache/conf.d/
    
 5. Execute fab local deploy so that DripLS can setup its components, or make a new 
    target in the deploy/fabfile for the remote server on which to deploy Dripls
