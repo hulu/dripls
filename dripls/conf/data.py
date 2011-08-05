@@ -72,6 +72,9 @@ class HttplsProvider( object ):
         if cid == "wt":
             return  urllib2.urlopen("file://" + self.base_path + "/playlists/wt.m3u8").read()
 
+        if cid == "url":
+            return  urllib2.urlopen(kwargs.get("cid_url")).read()
+
         raise ValueError("Unable to find provider that can fetch cid = {0} ".format(cid))
 
 
