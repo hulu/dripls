@@ -22,6 +22,10 @@ Returns back a streamable m3u8 playlist, previously prepared via a call to /mast
 
 Re-shapes a segment, specified by previously\_shaped\_url. The previously\_shaped\_url is retrieved via call to /cache, which performs the initial shape. The new_action is the action portion of a rule ( ex. net100.loss10) . Note that the segment MUST be previously shaped with a net rule in order to be reshaped. Segments that are matched by the e(rror) rule cannot be re-shaped, due to the fact that a playlist structure change must occur, which could lead to the possibility of inconsistent results due to client content caching. Re-shaping via /updatesegment is virtually transparent to the client, and can occur in-flight during streaming. During re-shaping only the actual segment shaping rules (on the server) are changed, while the actual playlist is not modified.
 
+	http://dripls-host/master.m3u8?authkey=[authkey]&cid=url&cid_url=[url-to-original-master-m3u8]&tag=[tag]&r=[rules]
+
+DripLS supports fetching and reshaping from an already accessible master m3u8. This is supported with all endpoints ( master.m3u8, cache, tag.m3u8). This configuration is useful when you already have a pre-built m3u8 available online ( either on a CDN, or another host accessible by the DripLS node) and you want to use DripLS to traffic shape this m3u8. To use this configuration set the cid parameter value to url and provide an additional parameter cid_url, which points to your master m3u8.
+
 Parameter Details
 ==========
 
