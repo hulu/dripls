@@ -1,1 +1,1 @@
-from dripls.fabfile import *
+from dripls.deploy.fabfile import *
