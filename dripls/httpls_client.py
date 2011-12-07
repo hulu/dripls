@@ -73,12 +73,13 @@ def get_variant_playlist_urls(main_playlist):
 
     try:
         for line in main_playlist.splitlines():
+            line = line.strip()
             if len(line) > 0:
                if line.startswith("#EXT"):
                    ext = line
                    for arg in line.split(","):
-                       if arg.startswith("BANDWIDTH"):
-                          bandwidth = arg.split("=")[1]
+                       if arg.strip().startswith("BANDWIDTH"):
+                          bandwidth = arg.split("=")[1].strip()
                else:
                    if not bandwidth:
                        continue
