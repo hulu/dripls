@@ -5,9 +5,11 @@ import re
 import shutil
 import urllib
 import urllib2
+import urlparse
 import base64
 import subprocess
 import conf.data
+import cherrypy
 
 def switch_segment(playlist_contents, old_segment, new_segment):
     """ Replace a segment from the original playlist with a new segment """
@@ -53,7 +55,8 @@ def pull_variant_playlist(url):
                     segment_counts[type] += 1
 
                 variant_playlist["segments"][segment_counts["segment"]] = { 
-                   "url": line, 
+                   "url": urlparse.urljoin(url, line), 
+                   "original_url": line, 
                    "segment": segment_counts["segment"], 
                    "{0}_segment".format(type): segment_counts[type],
                    "type":type,
@@ -64,7 +67,7 @@ def pull_variant_playlist(url):
     
     return variant_playlist
 
-def get_variant_playlist_urls(main_playlist):
+def get_variant_playlist_urls(main_playlist, master_playlist_url = '' ):
     """ Extract variant playlists from the main playlist """
 
     variant_uris = {}
@@ -87,7 +90,13 @@ def get_variant_playlist_urls(main_playlist):
                    if not bandwidth in variant_uris: 
                        variant_uris[str(bandwidth)] = {}
                
-                   variant_uris[str(bandwidth)][conf.data.provider.get_cdn_from_playlist_url(line)] = {"url":line, "type":"vplaylist", "bandwidth":bandwidth, "cdn" : conf.data.provider.get_cdn_from_playlist_url(line),  "ext":ext}
+                   variant_uris[str(bandwidth)][conf.data.provider.get_cdn_from_playlist_url(line)] = {
+                       "url": urlparse.urljoin(master_playlist_url, line), 
+                       "original_url" : line, 
+                       "type":"vplaylist", 
+                       "bandwidth":bandwidth, 
+                       "cdn" : conf.data.provider.get_cdn_from_playlist_url(line), 
+                       "ext":ext}
     except:
         raise ValueError("Unable to parse master playlist's content")
 

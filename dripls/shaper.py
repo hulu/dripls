@@ -213,7 +213,7 @@ def update_shaped_segment(url, rule_action, mock_shape_segment=False):
     logging.debug("{0} {1}".format(traffic_limit , traffic_loss))
     call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment)
 
-def cache_and_shape(master_playlist, seeded_content_id, rules):
+def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_url = ''):
     """Returns shaped m3u8 playlist
 
     Process and shape a m3u8 playlist based on a set of rules 
@@ -223,7 +223,7 @@ def cache_and_shape(master_playlist, seeded_content_id, rules):
     shape_info = {}
     shape_info["id"] = seeded_content_id
 
-    variant_playlists = httpls_client.get_variant_playlist_urls(master_playlist)
+    variant_playlists = httpls_client.get_variant_playlist_urls(master_playlist, master_playlist_url)
 
     for bitrate in variant_playlists.iterkeys():
         for alt in variant_playlists[bitrate].iterkeys():
@@ -233,7 +233,7 @@ def cache_and_shape(master_playlist, seeded_content_id, rules):
             # perform rewrite on the variant playlist url to local url or a rule matched url 
             seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist_desc)
             local_rewrite_url = conf.common.get_final_url("playlist.m3u8","p=m_{0}_{1}_{2}".format(seeded_content_id, bitrate, alt))
-            master_playlist = httpls_client.switch_segment( master_playlist, variant_playlist["url"], seg_rewrite_url if seg_rewrite_url else local_rewrite_url )
+            master_playlist = httpls_client.switch_segment( master_playlist, variant_playlist_desc["original_url"], seg_rewrite_url if seg_rewrite_url else local_rewrite_url )
 
             # don't process a playlist if it hit a rule (ie has been errored out)
             if seg_rewrite_url:
@@ -243,7 +243,12 @@ def cache_and_shape(master_playlist, seeded_content_id, rules):
             # perform rule rewrite on segments within the variant playlist  
             for s in variant_playlist["segments"].iterkeys():
                 seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist["segments"][s])
+                
+                # rewrite local to full url playlist
+                if variant_playlist["segments"][s]["original_url"] != variant_playlist["segments"][s]["url"]:
+                    variant_playlist["content"] = httpls_client.switch_segment(variant_playlist["content"], variant_playlist["segments"][s]["original_url"], variant_playlist["segments"][s]["url"])
 
+                # replace segment with shaped url
                 if seg_rewrite_url:
                     variant_playlist["content"] = httpls_client.switch_segment(variant_playlist["content"], variant_playlist["segments"][s]["url"], seg_rewrite_url)
                     variant_playlist["segments"][s]["url"] = seg_rewrite_url

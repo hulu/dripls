@@ -55,6 +55,18 @@ class HttplsProvider( object ):
         # by default nothing sensative, so return everything
         return kwargs
 
+    def master_m3u8_url(self, cid, kwargs):
+        """Optional. Used for relative variant urls"""
+
+        # if wt is requested , shortcut and use the local playlist
+        if cid == "wt":
+            return "file://" + self.base_path + "/playlists/wt.m3u8"
+
+        if cid == "url":
+            return kwargs.get("cid_url")
+
+	return ""
+
     def pull_master_m3u8(self, cid, kwargs):
         """
         
