@@ -7,6 +7,7 @@ import urllib2
 import urlparse
 import os.path
 import json
+from cherrypy.lib import httputil
 
 import conf.data
 import httpls_client
@@ -60,6 +61,7 @@ class DriplsController(object):
         # return the rewritten master  
         cherrypy.response.headers['Content-Type'] = "application/vnd.apple.mpegurl"
         cherrypy.response.headers['Content-Disposition'] = "inline; filename={0}.m3u8".format(cid)
+        cherrypy.response.headers['Last-Modified'] = httputil.HTTPDate()
 
         return master_content
 
@@ -72,6 +74,7 @@ class DriplsController(object):
 
         cherrypy.response.headers['Content-Type'] = "application/vnd.apple.mpegurl"
         cherrypy.response.headers['Content-Disposition'] = "inline; filename={0}.m3u8".format(p)
+        cherrypy.response.headers['Last-Modified'] = httputil.HTTPDate()
 
         return playlist_content
 
