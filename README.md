@@ -69,26 +69,35 @@ Bitrate
 
 __[bitrate]k__  - specifies the bit rate of the playlist for which the rule expression is for (ex. 650k , 1000k, 1500k) 
 
+__[bitrate]-[bitrate]k__  - specifies the bit rate range of the playlists for which the rule expression is for (ex. 650-3000k , 400-1000k) 
+
 __\*__           - wild-card can be used to mean "any" bit-rate playlist
 
 Segment
 ===============
 __s[number]__   - Specifies the absolute(regardless of type) segment number within the variable 
                   playlist for which the rule expression is for (ex. s0 - first segment, s1 - 
-                  second segm ent, s2 - third segment) 
+                  second segm ent, s2 - third segment) .
 
 __s\*__	        - Wild-card can be used to mean "any" segment within the playlist 
+
+__s[num]-[num]__ - Range can be used to mean "any" segment within the range of the playlist ( ex s0-5, s10-30)
 
 __c[number]__	- Specifies the content ( not ad or pre-roll) segment number within the variable 
                   playlist for which the rule expression is for (ex. c0 - first content segment after ads/pre-rolls) 
 
 __c\*__	        - Wild-card can be used to mean "any" content( not ad or pre-roll ) segment within the playlist 
 
+__c[num]-[num]__ - Range can be used to mean "any" segment within the range of the playlist ( ex c0-5, c10-30)
+
 __a[number]__   - Specifies the ad segment number within the variable playlist for which the rule expression
                   is for (ex. a0 - first ad segment)
 
 __a*__	        - Wild-card can be used to mean "any" ad segment within the playlist 
 
+__a[num]-[num]__ - Range can be used to mean "any" segment within the range of the playlist ( ex a0-5, a10-30)
+
+Note: *s* above denotes any segment in an ascending order. *c*, *a* and other segment types are configurable via the data provider in conf/data.py. 
 
 Rule Action
 ==============

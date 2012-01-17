@@ -33,7 +33,91 @@ def get_next_shape_port():
 def generate_status(status):
     return conf.common.get_final_url("ostatus","s={0}".format(status))
 
-def parse_rules(rule_string):
+def validate_match_rule_part(part):
+    parts = part.split('.')
+    if len(parts) > 3:
+	return False
+   
+    #check segment part
+    if len(parts) > 1 and not parts[-1][-1] == "k" and  not ( parts[-1][1:].isdigit() or parts[-1] == "*"):
+        # check for range
+        invalid_part = True
+
+        if parts[-1].find('-') > 0:
+            range = parts[-1][1:].split('-')
+            invalid_part = not (range[0].isdigit() and range[1].isdigit())
+
+        if invalid_part:
+	    return False
+
+    #check playlist part
+    if len(parts) == 1 and parts[-1][-1] != "k" and parts[-1][-1] != "*":
+        return False
+
+    if len(parts) == 2 and ( parts[1][-1] != "k" and parts[1][-1] != "*") and ( parts[0][-1] != "k" and parts[0][-1] != "*"):
+        return False       
+
+    if len(parts) == 3 and parts[1][-1] != "k" and parts[1][-1] != "*":
+        return False       
+
+    return True
+
+def expand_bitrate_match(matches, master_playlist_obj):
+    if not master_playlist_obj:
+        return matches
+
+    return_matches = []
+    for m in matches: 
+        parts = m.split('.')
+
+        has_range = False
+        for i in range(0,len(parts)): 
+           if parts[i][-1] == "k":
+               #found bitrate segment
+               if parts[i].find("-") < 0:
+                  break
+
+               has_range = True
+               rng = parts[i].split("-")                  
+               s_r = int(rng[0].replace("k","")) * 1000
+               e_r = int(rng[1].replace("k","")) * 1000
+
+               for vp in master_playlist_obj.keys():
+                   bitrate = int(vp)
+                   if s_r <= bitrate and bitrate <= e_r: 
+                       parts[i] = "{0}k".format(bitrate/1000) 
+                       return_matches.append(".".join(parts))
+ 
+        if not has_range:
+             return_matches.append(m)  
+           
+
+    return return_matches
+
+def expand_segment_match(matches):
+    return_matches = []
+    for m in matches: 
+       parts = m.split('.')
+
+       if parts[-1].find('-') > 0:    
+           t = parts[-1][0]
+           rng = parts[-1][1:].split('-')
+           for r in range( int(rng[0]), int(rng[1]) + 1 ):
+               parts[-1] = "{0}{1}".format(t,r)
+
+               return_matches.append('.'.join(parts))
+       else:
+           return_matches.append(m)
+ 
+    return return_matches 
+
+def expand_rule_match(match_part, master_playlist_obj):
+    matches = [match_part]
+
+    return expand_segment_match( expand_bitrate_match(matches, master_playlist_obj) )
+
+
+def parse_rules(rule_string, master_playlist_obj = None):
     rules = {}
 
     if not rule_string:
@@ -49,9 +133,17 @@ def parse_rules(rule_string):
             if not (action.startswith("e") or action.startswith("net")):
                 raise ValueError("Unable to parse rule action {0}".format(action)) 
 
-            rules[rule_parts[0].strip()] = rule_parts[1].strip()
-    except:
-        raise ValueError("Cannot parse rules : {0}".format(rule_string))
+            match = rule_parts[0].strip()
+
+            if not validate_match_rule_part(match):
+                raise ValueError("Rule invalid: " + match)
+            
+
+            for r_match in expand_rule_match(match, master_playlist_obj):
+                rules[r_match] = rule_parts[1].strip()
+
+    except Exception, err:
+        raise ValueError("Cannot parse rules : {0}, {1}".format(rule_string, str(err)))
 
     return rules
 

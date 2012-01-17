@@ -31,11 +31,45 @@ class TestShaper(unittest.TestCase):
         self.a0_1000k = next( self.v_playlist_1000k["segments"][s] for s in self.v_playlist_1000k["segments"] if self.v_playlist_1000k["segments"][s]["type"] == "ad" )   
         self.as0_1000k = next( self.v_playlist_1000k["segments"][s] for s in self.v_playlist_1000k["segments"] if self.v_playlist_1000k["segments"][s]["type"] == "asset" )   
 
+
+        self.mpl = {}
+        self.mpl["400000"] = {}
+        self.mpl["400000"]["__d"] = { "url": "http://test.com", "original_url" : "http://test.com", "type":"vplaylist", "bandwidth":400000, "cdn" : "__d"}
+        self.mpl["650000"] = {}
+        self.mpl["650000"]["__d"] = { "url": "http://test.com", "original_url" : "http://test.com", "type":"vplaylist", "bandwidth":650000, "cdn" : "__d"}
+        self.mpl["1000000"] = {}
+        self.mpl["1000000"]["__d"] = { "url": "http://test.com", "original_url" : "http://test.com", "type":"vplaylist", "bandwidth":1000000, "cdn" : "__d"}
+        self.mpl["1000000"]["v"] = { "url": "http://test.com", "original_url" : "http://test.com", "type":"vplaylist", "bandwidth":1000000, "cdn" : "__d"}
+        self.mpl["1000000"]["c"] = { "url": "http://test.com", "original_url" : "http://test.com", "type":"vplaylist", "bandwidth":1000000, "cdn" : "__d"}
+        self.mpl["4000000"] = {}
+        self.mpl["4000000"]["__d"] = { "url": "http://test.com", "original_url" : "http://test.com", "type":"vplaylist", "bandwidth":4000000, "cdn" : "__d"}
+
         shaper.shaper_store_path = "%s/" % self.test_path
         return
         
     def tearDown(self):
         return
+
+    def test_rule_parse_with_mpl(self):
+        rules = shaper.parse_rules("v.400k-4000k.s1-10~e404", self.mpl)
+        self.assertTrue(rules["v.400k.s5"] == "e404")
+        self.assertTrue(rules["v.650k.s5"] == "e404")
+        self.assertTrue(rules["v.4000k.s5"] == "e404")
+
+        rules = shaper.parse_rules("v.400k-4000k~e404", self.mpl)
+        self.assertTrue(rules["v.400k"] == "e404")
+
+        rules = shaper.parse_rules("400k-4000k~e404", self.mpl)
+        self.assertTrue(rules["400k"] == "e404")
+
+        rules = shaper.parse_rules("*~e404,1000-2000k~e500", self.mpl)
+        self.assertTrue(rules["1000k"] == "e500")
+
+        rules = shaper.parse_rules("*~e404,*.*.s10-20~net10", self.mpl)
+        self.assertTrue(rules["*.*.s12"] == "net10")
+
+
+
 
     def test_rule_parse(self):
         rules = shaper.parse_rules("*.*~e404")
@@ -48,10 +82,18 @@ class TestShaper(unittest.TestCase):
         rules = shaper.parse_rules("v.*.*~e404")
         rules = shaper.parse_rules("v.*.*~net100.loss10")
 
+        #test out range rules
+        rules = shaper.parse_rules("v.*.c1-10~e404")
+        rules = shaper.parse_rules("v.1000k.c1-10~e404")
+        self.assertTrue(rules["v.1000k.c5"] == "e404")
+        rules = shaper.parse_rules("v.1000k.s1-10~e404")
+        self.assertTrue(rules["v.1000k.s5"] == "e404")
+
         #segment multiple rules
         rules = shaper.parse_rules("v.650k.*~net100.loss10, *~ e404 ,500k~net100")
         self.assertTrue(rules["*"] == "e404")           
 
+        self.assertRaises(ValueError, shaper.parse_rules, "*.c0-12fa~e404,650k.c0~e404")
         self.assertRaises(ValueError, shaper.parse_rules, "*.c0~e404,*,650k.c0~e404")
         self.assertRaises(ValueError, shaper.parse_rules, "*.c0~404,*,650k.c0~e404")
 
