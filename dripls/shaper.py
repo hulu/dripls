@@ -25,10 +25,24 @@ def get_next_shape_port():
            port_queue.put(port)
 
    # rotate the port
+   
    port = port_queue.get()
    port_queue.put(port)
    
    return port  
+
+def get_shape_port_for(traffic_limit, traffic_loss, shape_session):
+    #shape port 
+    key = "{0}.{1}".format(traffic_limit, traffic_loss) 
+    if shape_session.has_key(key):
+        return shape_session[key]
+    else:
+        port = get_next_shape_port()
+        mock_shape_segment = True #XXX
+        call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment)
+        shape_session[key] = port
+
+        return port
 
 def generate_status(status):
     return conf.common.get_final_url("ostatus","s={0}".format(status))
@@ -159,27 +173,32 @@ def parse_net_rule_action(rule_action):
     # Default to traffic limit exceeding any practical bandwith limitations
     # Useful for scenarios where only packet loss is provided 
     traffic_limit = 100000
-
+    cache = True
     traffic_loss = 0
     for netrule in rule_action.split("."):
-        if netrule.startswith("net"):
+        if netrule.startswith("netcache"):
+            traffic_limit = int(netrule[8:])
+            cache = True
+        elif netrule.startswith("net"):
             traffic_limit = int(netrule[3:])
+            cache = False
+
+
         if netrule.startswith("loss"):
-            traffic_loss = int(netrule[4:])
-    
-    return (traffic_limit, traffic_loss)
+            traffic_loss = int(netrule[4:].replace("%",""))
+
+    return (traffic_limit, traffic_loss, cache)
 
 
-def segment_rule_rewrite(rules, playlist, segment, mock_shape_segment=False):
+def segment_rule_rewrite(rules, playlist, segment, shape_session, mock_shape_segment=False):
     """
 
     Given a set of rules and a segment in a playlist, find out whether the 
     segment is matched in any of the rules and if so perform the rule action
-    
+
     Possible rule actions are e - raise HTTP error, net - traffic shape
 
     """
-
     # perform rule matching
     rule_action = segment_rule_match(rules,playlist, segment)
 
@@ -192,7 +211,7 @@ def segment_rule_rewrite(rules, playlist, segment, mock_shape_segment=False):
         return generate_status(rule_action[1:]) 
 
     if rule_action.startswith("net"):
-        return shape_segment(segment, rule_action, mock_shape_segment=mock_shape_segment)
+        return shape_segment(segment, rule_action, mock_shape_segment=mock_shape_segment, shape_session = shape_session)
 
     raise ValueError( "Cannot match action against appropriate set of actions : {0}".format(rule_action))      
 
@@ -222,7 +241,7 @@ def segment_rule_match(rules, playlist, segment):
                 return rules["*"]
 
             continue
-           
+
         # handle case of specific type rule
         segment_type = "{0}_segment".format(segment["type"])
         check_rules.append("{0}.{1}{2}".format(bandwidth_key, segment["type"][0], segment[segment_type])) 
@@ -232,22 +251,22 @@ def segment_rule_match(rules, playlist, segment):
         check_rules.append("{0}.s{1}".format(bandwidth_key, segment["segment"])) 
         check_rules.append("{0}.s*".format(bandwidth_key))
         check_rules.append("{0}.*".format(bandwidth_key))
-        
+
         for rule in check_rules:
             if rule in rules: 
                 rule_action = rules[rule].lower() 
-                
+
                 logging.debug("matched rule : {0} in segment: {1} ".format(rule, segment["url"]))
-           
+
                 return rule_action
 
 def call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment):
     """
-    
+
     Call the external port shaper script to make sure that the desired rules are set for the port
-    
+
     Warning: If executing user is not in sudoers, the operation will fail
-    
+
     """
 
     shape_cmd = "sudo {0} {1} {2} {3}".format(conf.shaper_path, port, traffic_limit, traffic_loss) 
@@ -257,40 +276,41 @@ def call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment):
         # execute non-interactive
         p = subprocess.Popen(["/usr/bin/sudo", "-n", conf.shaper_path, str(port), str(traffic_limit), str(traffic_loss)], stdin=subprocess.PIPE)
         p.wait()
-        
+
         if p.returncode != 0:
             raise SystemError('Executing {0} failed with {1}'.format(conf.shaper_path, p.returncode))
 
-def shape_segment(segment, rule_action, mock_shape_segment=False):
+def shape_segment(segment, rule_action, mock_shape_segment=False, shape_session = {}):
     """Cache the segment and call the external shaper script"""
 
     sid = hashlib.sha224(conf.data.provider.normalize_segment_url(segment["url"])).hexdigest()
-       
-    #cache the file if it hasn't been cached already
-    s_filename = "{0}playlists/{1}.ts".format(shaper_store_path, sid)
-    if (not os.path.exists(s_filename)):
-        logging.debug("Fetching segment {0} ".format(segment["url"]))
-        segment_content = urllib2.urlopen(segment["url"]).read()
-        logging.debug("Done")
+    (traffic_limit, traffic_loss, cache_segment) = parse_net_rule_action(rule_action)
 
-        with open(s_filename, "wb+") as segment_file:
-            segment_file.write(segment_content)
-            segment_file.close()
-        
-        with open("{0}.meta".format(s_filename), "wb+") as metadata_file:
-            metadata_file.write(segment["url"])
-            metadata_file.close()
-    else: 
-        logging.debug("Segment cached {0} ".format(segment["url"]))
+    port = get_shape_port_for(traffic_limit, traffic_loss, shape_session)
 
-       
-    #shape port 
-    port = get_next_shape_port()
-    (traffic_limit, traffic_loss) = parse_net_rule_action(rule_action)
-    call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment)
+    if cache_segment:
+        #cache the file if it hasn't been cached already
+        s_filename = "{0}playlists/{1}.ts".format(shaper_store_path, sid)
+        if (not os.path.exists(s_filename)):
+            logging.debug("Fetching segment {0} ".format(segment["url"]))
+            segment_content = urllib2.urlopen(segment["url"]).read()
+            logging.debug("Done")
 
-    #return the final url
-    return conf.common.get_final_url("s/{0}/playlists/{1}.ts".format(port, sid), "" )
+            with open(s_filename, "wb+") as segment_file:
+                segment_file.write(segment_content)
+                segment_file.close()
+
+            with open("{0}.meta".format(s_filename), "wb+") as metadata_file:
+                metadata_file.write(segment["url"])
+                metadata_file.close()
+        else: 
+            logging.debug("Segment cached {0} ".format(segment["url"]))
+
+
+        #return the final url
+        return conf.common.get_final_url("s/{0}/playlists/{1}.ts".format(port, sid), "" )
+    else:
+        return conf.common.get_final_url("s/{0}/stream.ts?url={1}".format(port, segment["url"]), "")
 
 def update_shaped_segment(url, rule_action, mock_shape_segment=False): 
     """A request requested an update of a segment post-playlist generation. Handle this here"""
@@ -299,7 +319,7 @@ def update_shaped_segment(url, rule_action, mock_shape_segment=False):
 
     if not port_regex:
         raise("Invalid url. Url must be shaped in order to be re-shaped")
-    
+
     port = port_regex.group(0).replace("/s/","").rstrip('/')
     (traffic_limit, traffic_loss) = parse_net_rule_action(rule_action)
     logging.debug("{0} {1}".format(traffic_limit , traffic_loss))
@@ -314,6 +334,7 @@ def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_u
 
     shape_info = {}
     shape_info["id"] = seeded_content_id
+    shape_port_session = {}
 
     variant_playlists = httpls_client.get_variant_playlist_urls(master_playlist, master_playlist_url)
 
@@ -323,7 +344,7 @@ def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_u
             variant_playlist = httpls_client.pull_variant_playlist( variant_playlist_desc["url"])
 
             # perform rewrite on the variant playlist url to local url or a rule matched url 
-            seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist_desc)
+            seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist_desc, shape_port_session)
             local_rewrite_url = conf.common.get_final_url("playlist.m3u8","p=m_{0}_{1}_{2}".format(seeded_content_id, bitrate, alt))
             master_playlist = httpls_client.switch_segment( master_playlist, variant_playlist_desc["original_url"], seg_rewrite_url if seg_rewrite_url else local_rewrite_url )
 
@@ -331,11 +352,11 @@ def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_u
             if seg_rewrite_url:
                 shape_info["{0}.{1}".format(bitrate, alt)] = seg_rewrite_url
                 continue
- 
+
             # perform rule rewrite on segments within the variant playlist  
             for s in variant_playlist["segments"].iterkeys():
-                seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist["segments"][s])
-                
+                seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist["segments"][s], shape_port_session)
+
                 # rewrite local to full url playlist
                 if variant_playlist["segments"][s]["original_url"] != variant_playlist["segments"][s]["url"]:
                     variant_playlist["content"] = httpls_client.switch_segment(variant_playlist["content"], variant_playlist["segments"][s]["original_url"], variant_playlist["segments"][s]["url"])
@@ -348,8 +369,9 @@ def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_u
 
             httpls_client.store_playlist(variant_playlist["content"], shaper_store_path + "playlists/m_{0}_{1}_{2}.m3u8".format(seeded_content_id, bitrate, alt))
 
-         
+
+    shape_port_session = {}
     httpls_client.store_playlist(master_playlist, shaper_store_path + "playlists/m_{0}.m3u8".format(seeded_content_id))
     return shape_info
-    
+
 
