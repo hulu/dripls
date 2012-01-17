@@ -22,6 +22,24 @@ def store_playlist(playlist_contents, path):
     with open(path, "w") as p_file:
         p_file.writelines(playlist_contents)
 
+def rewrite_ext_key(playlist_url, keyext):
+    parts = keyext.split(',')
+    key_parts = []
+
+    for part in parts:
+        kv = part.split('=')
+
+        if kv[0] == "URI":
+            url_parse = urlparse.urlparse(kv[1])
+            kv[1] = "\"{0}\"".format( urlparse.urljoin(playlist_url, kv[1].strip('"')) )
+            url_part = '='.join([kv[0] , kv[1]])
+            key_parts.append(url_part)
+        else:
+            key_parts.append(part)
+
+    return ','.join(key_parts)
+
+
 def pull_variant_playlist(url):
     """ Pull a variant playlist's content """
 
@@ -37,10 +55,14 @@ def pull_variant_playlist(url):
         ext = ""
         for line in variant_playlist["content"].splitlines():
             if line.startswith("#EXT"):
-                if line.startswith("#EXT-X-KEY:METHOD=AES-"):
+                # replace key with fullpath key
+                if line.startswith("#EXT-X-KEY:"):
+                    orig_line = line
+                    line = rewrite_ext_key(url, orig_line)
+
                     variant_playlist["key_ext"] = line
-                else:
-                    ext = line
+                    variant_playlist["content"] = variant_playlist["content"].replace(orig_line, line)
+                    
             else:
                 type = conf.data.provider.get_segment_type(line)            
            
