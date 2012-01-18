@@ -53,7 +53,10 @@ def validate_match_rule_part(part):
 	return False
    
     #check segment part
-    if len(parts) > 1 and not parts[-1][-1] == "k" and  not ( parts[-1][1:].isdigit() or parts[-1] == "*"):
+    if (len(parts) > 1 and 
+        not parts[-1][-1] == "k" and 
+        not parts[-1][-1] == "*" and 
+        not ( parts[-1][1:].isdigit() or parts[-1] == "*")):
         # check for range
         invalid_part = True
 

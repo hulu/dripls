@@ -82,6 +82,19 @@ class TestShaper(unittest.TestCase):
         rules = shaper.parse_rules("v.*.*~e404")
         rules = shaper.parse_rules("v.*.*~net100.loss10")
 
+        #test out c* type rules
+        rules = shaper.parse_rules("v.*.c*~e404")
+        self.assertTrue(rules["v.*.c*"] == "e404")
+
+        rules = shaper.parse_rules("*.s*~e404")
+        self.assertTrue(rules["*.s*"] == "e404")
+
+        rules = shaper.parse_rules("650k.s*~e404")
+        self.assertTrue(rules["650k.s*"] == "e404")
+
+
+
+
         #test out range rules
         rules = shaper.parse_rules("v.*.c1-10~e404")
         rules = shaper.parse_rules("v.1000k.c1-10~e404")
@@ -151,15 +164,15 @@ class TestShaper(unittest.TestCase):
         self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("a.*.*~net100.loss10,1000k.s0~net100"), self.v_playlist_1000k, self.s0_1000k) == "net100")
 
     def test_segment_shape(self):
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k~e400"), self.v_playlist_1000k, self.v_playlist_1000k) == shaper.generate_status(400))
+        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k~e400"), self.v_playlist_1000k, self.v_playlist_1000k, {}) == shaper.generate_status(400))
 
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s0~e404"), self.v_playlist_1000k, self.s0_1000k) == shaper.generate_status(404))
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s1~e404"), self.v_playlist_1000k, self.s0_1000k) == None)
+        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s0~e404"), self.v_playlist_1000k, self.s0_1000k, {}) == shaper.generate_status(404))
+        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s1~e404"), self.v_playlist_1000k, self.s0_1000k, {}) == None)
   
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s0~net100.loss10"), self.v_playlist_1000k, self.s0_1000k_mock, mock_shape_segment=True) != None)
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.*~net100.loss10"),self.v_playlist_1000k, self.s0_1000k_mock, mock_shape_segment=True) != None)
+        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s0~net100.loss10"), self.v_playlist_1000k, self.s0_1000k_mock, {}, mock_shape_segment=True) != None)
+        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.*~net100.loss10"),self.v_playlist_1000k, self.s0_1000k_mock, {}, mock_shape_segment=True) != None)
 
-        self.assertRaises(ValueError, shaper.segment_rule_rewrite, {"1000k.*":"404"}, self.v_playlist_1000k, self.s0_1000k_mock)
+        self.assertRaises(ValueError, shaper.segment_rule_rewrite, {"1000k.*":"404"}, self.v_playlist_1000k, self.s0_1000k_mock, {})
       
     def test_cache_and_shape(self):
         seeded_cid = conf.common.get_seeded_cid("wt")
