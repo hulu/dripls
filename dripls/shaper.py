@@ -7,6 +7,7 @@ from subprocess import *
 import Queue
 import urlparse
 import urllib2
+import urllib
 import uuid
 import hashlib
 import re
@@ -31,14 +32,13 @@ def get_next_shape_port():
    
    return port  
 
-def get_shape_port_for(traffic_limit, traffic_loss, shape_session):
+def get_shape_port_for(traffic_limit, traffic_loss, shape_session, mock_shape_segment = False):
     #shape port 
     key = "{0}.{1}".format(traffic_limit, traffic_loss) 
     if shape_session.has_key(key):
         return shape_session[key]
     else:
         port = get_next_shape_port()
-        mock_shape_segment = True #XXX
         call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment)
         shape_session[key] = port
 
@@ -286,7 +286,7 @@ def shape_segment(segment, rule_action, mock_shape_segment=False, shape_session 
     sid = hashlib.sha224(conf.data.provider.normalize_segment_url(segment["url"])).hexdigest()
     (traffic_limit, traffic_loss, cache_segment) = parse_net_rule_action(rule_action)
 
-    port = get_shape_port_for(traffic_limit, traffic_loss, shape_session)
+    port = get_shape_port_for(traffic_limit, traffic_loss, shape_session, mock_shape_segment)
 
     if cache_segment:
         #cache the file if it hasn't been cached already
@@ -310,7 +310,7 @@ def shape_segment(segment, rule_action, mock_shape_segment=False, shape_session 
         #return the final url
         return conf.common.get_final_url("s/{0}/playlists/{1}.ts".format(port, sid), "" )
     else:
-        return conf.common.get_final_url("s/{0}/stream.ts?url={1}".format(port, segment["url"]), "")
+        return conf.common.get_final_url("s/{0}/stream.ts?url={1}".format(port, urllib.quote_plus(segment["url"])), "")
 
 def update_shaped_segment(url, rule_action, mock_shape_segment=False): 
     """A request requested an update of a segment post-playlist generation. Handle this here"""

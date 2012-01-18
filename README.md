@@ -107,8 +107,12 @@ Action
 ==================
 __e[http error code]__                                - Replace the playlist's matching segment url with a url that returns a 404 status code upon invocation ( ex. e404 ) 
 
-__net[bandwidth in kbps]loss[% of packets dropped]__  - The net rule action, when applied to a segment, causes the segment to be locally cached and then served at 
+__net[bandwidth in kbps]loss[% of packets dropped]__  - The net rule action, when applied to a segment, causes the segment to be stream served at 
                                                         [bandwidth in kbps]  with [% of packets dropped]  ( ex. net200loss10 - serve the matched segment at 200kbps
+                                                        max with 10% packet loss during transmission)
+
+__netcache[bandwidth in kbps]loss[% of packets dropped]__  - The netcache rule action, when applied to a segment, causes the segment to be locally cached and then served at 
+                                                        [bandwidth in kbps]  with [% of packets dropped]  ( ex. netcache200loss10 - serve the matched segment at 200kbps
                                                         max with 10% packet loss during transmission)
 
 
@@ -186,11 +190,11 @@ Traffic shape segments
 
        http://dripls-host/master.m3u8?authkey=sample&cid=wt&r=*.c1~net5 
 
->Cache the second content segment of each playlist, and rewrite the vplaylist to serve the segment with maximum download speed of 5kbs
+>The second content segment of each playlist, and rewrite the vplaylist to serve the segment with maximum download speed of 5kbs
 
        http://dripls-host/master.m3u8?authkey=sample&cid=wt&r=*.c2~net500.loss10
 
->Cache the third content segment of each playlist, and rewrite the vplaylist to serve the segment with maximum download speed of 500kbs and 10% packet loss
+>The hird content segment of each playlist, and rewrite the vplaylist to serve the segment with maximum download speed of 500kbs and 10% packet loss
 
        http://dripls-host/master.m3u8?authkey=sample&cid=wt&r=*.c1~net5,*.c2~net500.loss10
 
