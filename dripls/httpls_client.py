@@ -29,10 +29,10 @@ def rewrite_ext_key(playlist_url, keyext):
     for part in parts:
         kv = part.split('=')
 
-        if kv[0] == "URI":
-            url_parse = urlparse.urlparse(kv[1])
-            kv[1] = "\"{0}\"".format( urlparse.urljoin(playlist_url, kv[1].strip('"')) )
-            url_part = '='.join([kv[0] , kv[1]])
+        if kv[0].strip() == "URI":
+            key_url = '='.join(kv[1:])
+            kv[1] = "\"{0}\"".format( urlparse.urljoin(playlist_url, key_url.strip('"')) )
+            url_part = '='.join([kv[0] , key_url])
             key_parts.append(url_part)
         else:
             key_parts.append(part)
