@@ -31,8 +31,8 @@ def rewrite_ext_key(playlist_url, keyext):
 
         if kv[0].strip() == "URI":
             key_url = '='.join(kv[1:])
-            kv[1] = "\"{0}\"".format( urlparse.urljoin(playlist_url, key_url.strip('"')) )
-            url_part = '='.join([kv[0] , key_url])
+            key_full_url = "\"{0}\"".format( urlparse.urljoin(playlist_url, key_url.strip('"')) )
+            url_part = '='.join([kv[0] , key_full_url])
             key_parts.append(url_part)
         else:
             key_parts.append(part)
