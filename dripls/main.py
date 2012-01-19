@@ -113,6 +113,42 @@ class DriplsController(object):
   
         #run master with the tag args
         return self.master_m3u8(**tag_args);
+ 
+    @cherrypy.expose
+    def variant_m3u8(self, cid=None, r=None, tag=None, **kwargs):
+        """ Special endpoint for shaping direct variqnt playlists"""
+
+        seeded_content_id = conf.common.get_seeded_cid(cid)
+        fake_master_playlist_url = ""
+        fake_master_playlist =  """
+        #EXTM3U
+        #EXT-X-VERSION:2
+        #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=0,RESOLUTION=0x0
+        {0}
+        """.format( conf.data.provider.master_m3u8_url(cid, kwargs) )
+
+        varient_playlists = httpls_client.get_variant_playlist_urls(fake_master_playlist, fake_master_playlist_url)
+        rules = shaper.parse_rules(r, varient_playlists)
+
+        info = shaper.cache_and_shape(fake_master_playlist, seeded_content_id, rules, fake_master_playlist_url)
+        info["url"] = conf.common.get_final_url("playlist.m3u8","p=m_{0}".format(seeded_content_id))
+
+        # if we have a tag, store
+        if tag:
+            self.store_tag(cid, r, tag, kwargs)
+
+        cached_cid = info['variants'][info['variants'].keys()[0]]
+
+        with open("{0}/playlists/m_{1}.m3u8".format(shaper.shaper_store_path, cached_cid), "r") as pf:
+            master_content = pf.read()
+
+        # return the rewritten master  
+        cherrypy.response.headers['Content-Type'] = "application/vnd.apple.mpegurl"
+        cherrypy.response.headers['Content-Disposition'] = "inline; filename={0}.m3u8".format(cid)
+        cherrypy.response.headers['Last-Modified'] = httputil.HTTPDate()
+
+        return master_content
+
 
     def cache_stream(self, cid=None, r=None, tag=None, kwargs=None):
         """ Perform the actual caching and shaping  of the stream """
@@ -133,6 +169,7 @@ class DriplsController(object):
             self.store_tag(cid, r, tag, kwargs)
 
         return info
+
 
     def store_tag(self, cid, r, tag, kwargs):
         """ Store all arguments recieved on the url as the associated tag """

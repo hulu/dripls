@@ -334,6 +334,7 @@ def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_u
 
     shape_info = {}
     shape_info["id"] = seeded_content_id
+    shape_info["variants"] = {}
     shape_port_session = {}
 
     variant_playlists = httpls_client.get_variant_playlist_urls(master_playlist, master_playlist_url)
@@ -346,6 +347,7 @@ def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_u
             # perform rewrite on the variant playlist url to local url or a rule matched url 
             seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist_desc, shape_port_session)
             local_rewrite_url = conf.common.get_final_url("playlist.m3u8","p=m_{0}_{1}_{2}".format(seeded_content_id, bitrate, alt))
+            shape_info["variants"]["{0}_{1}".format(bitrate, alt)] = "{0}_{1}_{2}".format(seeded_content_id, bitrate, alt)
             master_playlist = httpls_client.switch_segment( master_playlist, variant_playlist_desc["original_url"], seg_rewrite_url if seg_rewrite_url else local_rewrite_url )
 
             # don't process a playlist if it hit a rule (ie has been errored out)
