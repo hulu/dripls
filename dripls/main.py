@@ -117,11 +117,13 @@ class DriplsController(object):
     def cache_stream(self, cid=None, r=None, tag=None, kwargs=None):
         """ Perform the actual caching and shaping  of the stream """
 
-        rules = shaper.parse_rules(r)
 
         seeded_content_id = conf.common.get_seeded_cid(cid)
         master_playlist_url = conf.data.provider.master_m3u8_url(cid, kwargs)
         master_playlist = conf.data.provider.pull_master_m3u8(cid, kwargs)
+        varient_playlists = httpls_client.get_variant_playlist_urls(master_playlist, master_playlist_url)
+
+        rules = shaper.parse_rules(r, varient_playlists)
 
         info = shaper.cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_url)
         info["url"] = conf.common.get_final_url("playlist.m3u8","p=m_{0}".format(seeded_content_id))

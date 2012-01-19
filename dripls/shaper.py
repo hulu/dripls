@@ -86,7 +86,6 @@ def expand_bitrate_match(matches, master_playlist_obj):
     return_matches = []
     for m in matches: 
         parts = m.split('.')
-
         has_range = False
         for i in range(0,len(parts)): 
            if parts[i][-1] == "k":
@@ -108,15 +107,14 @@ def expand_bitrate_match(matches, master_playlist_obj):
         if not has_range:
              return_matches.append(m)  
            
-
     return return_matches
 
 def expand_segment_match(matches):
     return_matches = []
     for m in matches: 
        parts = m.split('.')
-
-       if parts[-1].find('-') > 0:    
+ 
+       if len(parts) > 1 and parts[-1].find('-') > 0:    
            t = parts[-1][0]
            rng = parts[-1][1:].split('-')
            for r in range( int(rng[0]), int(rng[1]) + 1 ):
@@ -130,7 +128,6 @@ def expand_segment_match(matches):
 
 def expand_rule_match(match_part, master_playlist_obj):
     matches = [match_part]
-
     return expand_segment_match( expand_bitrate_match(matches, master_playlist_obj) )
 
 
