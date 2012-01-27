@@ -7,6 +7,7 @@ import urllib2
 import urlparse
 import os.path
 import json
+import sys
 from cherrypy.lib import httputil
 
 import conf.data
@@ -48,7 +49,18 @@ class DriplsController(object):
         import socket
         socket._fileobject.default_bufsize = 0
 
-        ts = urllib2.urlopen(kwargs['url'])
+        serving_request = cherrypy.serving.request
+        if serving_request.protocol >= (1, 1):
+            r = httputil.get_ranges(serving_request.headers.get('Range'), sys.maxint)
+
+            # TODO : do something with range request if need be
+       
+        req = urllib2.Request(kwargs['url'])
+        for header in serving_request.headers:
+             if header not in ['Range','Accept','User-Agent']:
+                  continue
+             req.headers[header] = serving_request.headers.get(header)
+        ts = urllib2.urlopen(req)
 
         for h in ts.headers.keys():
             cherrypy.response.headers[h] = ts.headers[h]
