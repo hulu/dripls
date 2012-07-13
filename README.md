@@ -107,12 +107,12 @@ Action
 ==================
 __e[http error code]__                                - Replace the playlist's matching segment url with a url that returns a 404 status code upon invocation ( ex. e404 ) 
 
-__net[bandwidth in kbps]loss[% of packets dropped]__  - The net rule action, when applied to a segment, causes the segment to be stream served at 
-                                                        [bandwidth in kbps]  with [% of packets dropped]  ( ex. net200loss10 - serve the matched segment at 200kbps
+__net[bandwidth in kbit]loss[% of packets dropped]__  - The net rule action, when applied to a segment, causes the segment to be stream served at 
+                                                        [bandwidth in kbit]  with [% of packets dropped]  ( ex. net200loss10 - serve the matched segment at 200kbit
                                                         max with 10% packet loss during transmission)
 
-__netcache[bandwidth in kbps]loss[% of packets dropped]__  - The netcache rule action, when applied to a segment, causes the segment to be locally cached and then served at 
-                                                        [bandwidth in kbps]  with [% of packets dropped]  ( ex. netcache200loss10 - serve the matched segment at 200kbps
+__netcache[bandwidth in kbit]loss[% of packets dropped]__  - The netcache rule action, when applied to a segment, causes the segment to be locally cached and then served at 
+                                                        [bandwidth in kbit]  with [% of packets dropped]  ( ex. netcache200loss10 - serve the matched segment at 200kbit
                                                         max with 10% packet loss during transmission)
 
 
