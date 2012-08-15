@@ -50,65 +50,65 @@ class TestShaper(unittest.TestCase):
     def tearDown(self):
         return
 
-    def test_rule_parse_with_mpl(self):
-        rules = shaper.parse_rules("v.400k-4000k.s1-10~e404", self.mpl)
+    def test_hls_rule_parse_with_mpl(self):
+        rules = shaper.parse_hls_rules("v.400k-4000k.s1-10~e404", self.mpl)
         self.assertTrue(rules["v.400k.s5"] == "e404")
         self.assertTrue(rules["v.650k.s5"] == "e404")
         self.assertTrue(rules["v.4000k.s5"] == "e404")
 
-        rules = shaper.parse_rules("v.400k-4000k~e404", self.mpl)
+        rules = shaper.parse_hls_rules("v.400k-4000k~e404", self.mpl)
         self.assertTrue(rules["v.400k"] == "e404")
 
-        rules = shaper.parse_rules("400k-4000k~e404", self.mpl)
+        rules = shaper.parse_hls_rules("400k-4000k~e404", self.mpl)
         self.assertTrue(rules["400k"] == "e404")
 
-        rules = shaper.parse_rules("*~e404,1000-2000k~e500", self.mpl)
+        rules = shaper.parse_hls_rules("*~e404,1000-2000k~e500", self.mpl)
         self.assertTrue(rules["1000k"] == "e500")
 
-        rules = shaper.parse_rules("*~e404,*.*.s10-20~net10", self.mpl)
+        rules = shaper.parse_hls_rules("*~e404,*.*.s10-20~net10", self.mpl)
         self.assertTrue(rules["*.*.s12"] == "net10")
 
 
 
 
-    def test_rule_parse(self):
-        rules = shaper.parse_rules("*.*~e404")
+    def test_hls_rule_parse(self):
+        rules = shaper.parse_hls_rules("*.*~e404")
         self.assertTrue(rules["*.*"] == "e404")
-        self.assertTrue(shaper.parse_rules(None) == {})
+        self.assertTrue(shaper.parse_hls_rules(None) == {})
 
-        self.assertRaises(ValueError, shaper.parse_rules, "*.-404")
+        self.assertRaises(ValueError, shaper.parse_hls_rules, "*.-404")
 
         #test out [cdn][bitrate][segment]        
-        rules = shaper.parse_rules("v.*.*~e404")
-        rules = shaper.parse_rules("v.*.*~net100.loss10")
+        rules = shaper.parse_hls_rules("v.*.*~e404")
+        rules = shaper.parse_hls_rules("v.*.*~net100.loss10")
 
         #test out c* type rules
-        rules = shaper.parse_rules("v.*.c*~e404")
+        rules = shaper.parse_hls_rules("v.*.c*~e404")
         self.assertTrue(rules["v.*.c*"] == "e404")
 
-        rules = shaper.parse_rules("*.s*~e404")
+        rules = shaper.parse_hls_rules("*.s*~e404")
         self.assertTrue(rules["*.s*"] == "e404")
 
-        rules = shaper.parse_rules("650k.s*~e404")
+        rules = shaper.parse_hls_rules("650k.s*~e404")
         self.assertTrue(rules["650k.s*"] == "e404")
 
 
 
 
         #test out range rules
-        rules = shaper.parse_rules("v.*.c1-10~e404")
-        rules = shaper.parse_rules("v.1000k.c1-10~e404")
+        rules = shaper.parse_hls_rules("v.*.c1-10~e404")
+        rules = shaper.parse_hls_rules("v.1000k.c1-10~e404")
         self.assertTrue(rules["v.1000k.c5"] == "e404")
-        rules = shaper.parse_rules("v.1000k.s1-10~e404")
+        rules = shaper.parse_hls_rules("v.1000k.s1-10~e404")
         self.assertTrue(rules["v.1000k.s5"] == "e404")
 
         #segment multiple rules
-        rules = shaper.parse_rules("v.650k.*~net100.loss10, *~ e404 ,500k~net100")
+        rules = shaper.parse_hls_rules("v.650k.*~net100.loss10, *~ e404 ,500k~net100")
         self.assertTrue(rules["*"] == "e404")           
 
-        self.assertRaises(ValueError, shaper.parse_rules, "*.c0-12fa~e404,650k.c0~e404")
-        self.assertRaises(ValueError, shaper.parse_rules, "*.c0~e404,*,650k.c0~e404")
-        self.assertRaises(ValueError, shaper.parse_rules, "*.c0~404,*,650k.c0~e404")
+        self.assertRaises(ValueError, shaper.parse_hls_rules, "*.c0-12fa~e404,650k.c0~e404")
+        self.assertRaises(ValueError, shaper.parse_hls_rules, "*.c0~e404,*,650k.c0~e404")
+        self.assertRaises(ValueError, shaper.parse_hls_rules, "*.c0~404,*,650k.c0~e404")
 
         return
  
@@ -123,61 +123,61 @@ class TestShaper(unittest.TestCase):
            
         self.assertTrue ( p != None and p2 != None and p != p2)
         
-    def test_segment_rule_match_vplaylist(self):
+    def test_hls_segment_rule_match_vplaylist(self):
         v_playlists_desc = httpls_client.get_variant_playlist_urls(self.master_playlist)
        
         p4000k = next( v_playlists_desc["4000000"].itervalues())
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("4000k~e404"), p4000k, p4000k) != None )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("650k~e404"), p4000k, p4000k) == None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("4000k~e404"), p4000k, p4000k) != None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("650k~e404"), p4000k, p4000k) == None )
 
         master_cdn_playlist = open(self.test_path + "/wt_suite/basic/wt_master_cdn_fallback.m3u8","r").read()
         v_playlists_cdn_desc = httpls_client.get_variant_playlist_urls(master_cdn_playlist)
     
         p4000k_a =  v_playlists_cdn_desc["4000000"]["a"]
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("b.4000k~e404"), p4000k_a, p4000k_a) == None )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("a.4000k~e404"), p4000k_a, p4000k_a) != None )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("4000k~e404"), p4000k_a, p4000k_a) != None )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("*~e404"), p4000k_a, p4000k_a) != None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("b.4000k~e404"), p4000k_a, p4000k_a) == None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("a.4000k~e404"), p4000k_a, p4000k_a) != None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("4000k~e404"), p4000k_a, p4000k_a) != None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("*~e404"), p4000k_a, p4000k_a) != None )
         
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("1000k.s0~e404,1000k~e500"), self.v_playlist_1000k, self.v_playlist_1000k) != None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("1000k.s0~e404,1000k~e500"), self.v_playlist_1000k, self.v_playlist_1000k) != None )
  
-    def test_segment_rule_match_segment(self):
+    def test_hls_segment_rule_match_segment(self):
         # test rule matching with regular segments      
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("1000k~e404"), self.v_playlist_1000k, self.s0_1000k) == None )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("1000k.s1~e404"), self.v_playlist_1000k, self.s0_1000k) == None )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("1000k.s0~e404"), self.v_playlist_1000k, self.s0_1000k) == "e404" )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("1000k~e404"), self.v_playlist_1000k, self.s0_1000k) == None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("1000k.s1~e404"), self.v_playlist_1000k, self.s0_1000k) == None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("1000k.s0~e404"), self.v_playlist_1000k, self.s0_1000k) == "e404" )
 
         # test rule matching with content segments
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("1000k.c0~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404" )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("1000k.*~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404" )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("1000k.c0~e404"), self.v_playlist_1000k, self.s0_1000k) == None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("1000k.c0~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404" )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("1000k.*~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404" )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("1000k.c0~e404"), self.v_playlist_1000k, self.s0_1000k) == None )
 
         # test rule matching with cdn and segments
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("a.*.c0~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404" )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("b.*.c0~e404"), self.v_playlist_1000k, self.c0_1000k) == None )
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("a.*.*~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404" )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("a.*.c0~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404" )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("b.*.c0~e404"), self.v_playlist_1000k, self.c0_1000k) == None )
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("a.*.*~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404" )
 
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("a.*.*~net100.loss10"), self.v_playlist_1000k, self.c0_1000k) == "net100.loss10")
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("a.*.*~net100.loss10"), self.v_playlist_1000k, self.c0_1000k) == "net100.loss10")
 
         # specific rule takes precedencee
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("a.*.*~net100.loss10,1000k.c0~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404")
-        self.assertTrue( shaper.segment_rule_match(shaper.parse_rules("a.*.*~net100.loss10,1000k.s0~net100"), self.v_playlist_1000k, self.s0_1000k) == "net100")
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("a.*.*~net100.loss10,1000k.c0~e404"), self.v_playlist_1000k, self.c0_1000k) == "e404")
+        self.assertTrue( shaper.hls_segment_rule_match(shaper.parse_hls_rules("a.*.*~net100.loss10,1000k.s0~net100"), self.v_playlist_1000k, self.s0_1000k) == "net100")
 
-    def test_segment_shape(self):
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k~e400"), self.v_playlist_1000k, self.v_playlist_1000k, {}) == shaper.generate_status(400))
+    def test_hls_segment_shape(self):
+        self.assertTrue( shaper.hls_segment_rule_rewrite(shaper.parse_hls_rules("1000k~e400"), self.v_playlist_1000k, self.v_playlist_1000k, {}) == shaper.generate_status(400))
 
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s0~e404"), self.v_playlist_1000k, self.s0_1000k, {}) == shaper.generate_status(404))
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s1~e404"), self.v_playlist_1000k, self.s0_1000k, {}) == None)
+        self.assertTrue( shaper.hls_segment_rule_rewrite(shaper.parse_hls_rules("1000k.s0~e404"), self.v_playlist_1000k, self.s0_1000k, {}) == shaper.generate_status(404))
+        self.assertTrue( shaper.hls_segment_rule_rewrite(shaper.parse_hls_rules("1000k.s1~e404"), self.v_playlist_1000k, self.s0_1000k, {}) == None)
   
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.s0~net100.loss10"), self.v_playlist_1000k, self.s0_1000k_mock, {}, mock_shape_segment=True) != None)
-        self.assertTrue( shaper.segment_rule_rewrite(shaper.parse_rules("1000k.*~net100.loss10"),self.v_playlist_1000k, self.s0_1000k_mock, {}, mock_shape_segment=True) != None)
+        self.assertTrue( shaper.hls_segment_rule_rewrite(shaper.parse_hls_rules("1000k.s0~net100.loss10"), self.v_playlist_1000k, self.s0_1000k_mock, {}, mock_shape_segment=True) != None)
+        self.assertTrue( shaper.hls_segment_rule_rewrite(shaper.parse_hls_rules("1000k.*~net100.loss10"),self.v_playlist_1000k, self.s0_1000k_mock, {}, mock_shape_segment=True) != None)
 
-        self.assertRaises(ValueError, shaper.segment_rule_rewrite, {"1000k.*":"404"}, self.v_playlist_1000k, self.s0_1000k_mock, {})
+        self.assertRaises(ValueError, shaper.hls_segment_rule_rewrite, {"1000k.*":"404"}, self.v_playlist_1000k, self.s0_1000k_mock, {})
       
-    def test_cache_and_shape(self):
+    def test_hls_cache_and_shape(self):
         seeded_cid = conf.common.get_seeded_cid("wt")
       
-        shaper.cache_and_shape(self.master_loc_playlist, seeded_cid, shaper.parse_rules("1000k.s0~e404,4000k~e500"))
+        shaper.hls_cache_and_shape(self.master_loc_playlist, seeded_cid, shaper.parse_hls_rules("1000k.s0~e404,4000k~e500"))
                 
         self.assertTrue( open("%s/playlists/m_%s.m3u8" % (self.test_path, seeded_cid) ).read().find("s=500") != -1)
         self.assertTrue( open("%s/playlists/m_%s_1000000__d.m3u8" % (self.test_path, seeded_cid) ).read().find("s=404") != -1)

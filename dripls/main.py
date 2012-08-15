@@ -140,9 +140,9 @@ class DriplsController(object):
         """.format( conf.data.provider.master_m3u8_url(cid, kwargs) )
 
         varient_playlists = httpls_client.get_variant_playlist_urls(fake_master_playlist, fake_master_playlist_url)
-        rules = shaper.parse_rules(r, varient_playlists)
+        rules = shaper.parse_hls_rules(r, varient_playlists)
 
-        info = shaper.cache_and_shape(fake_master_playlist, seeded_content_id, rules, fake_master_playlist_url)
+        info = shaper.hls_cache_and_shape(fake_master_playlist, seeded_content_id, rules, fake_master_playlist_url)
         info["url"] = conf.common.get_final_url("playlist.m3u8","p=m_{0}".format(seeded_content_id))
 
         # if we have a tag, store
@@ -171,9 +171,9 @@ class DriplsController(object):
         master_playlist = conf.data.provider.pull_master_m3u8(cid, kwargs)
         varient_playlists = httpls_client.get_variant_playlist_urls(master_playlist, master_playlist_url)
 
-        rules = shaper.parse_rules(r, varient_playlists)
+        rules = shaper.parse_hls_rules(r, varient_playlists)
 
-        info = shaper.cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_url)
+        info = shaper.hls_cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_url)
         info["url"] = conf.common.get_final_url("playlist.m3u8","p=m_{0}".format(seeded_content_id))
 
         # if we have a tag, store

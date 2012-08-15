@@ -47,7 +47,7 @@ def get_shape_port_for(traffic_limit, traffic_loss, shape_session, mock_shape_se
 def generate_status(status):
     return conf.common.get_final_url("ostatus","s={0}".format(status))
 
-def validate_match_rule_part(part):
+def validate_hls_match_rule_part(part):
     parts = part.split('.')
     if len(parts) > 3:
 	return False
@@ -79,7 +79,7 @@ def validate_match_rule_part(part):
 
     return True
 
-def expand_bitrate_match(matches, master_playlist_obj):
+def expand_hls_bitrate_match(matches, master_playlist_obj):
     if not master_playlist_obj:
         return matches
 
@@ -109,7 +109,7 @@ def expand_bitrate_match(matches, master_playlist_obj):
            
     return return_matches
 
-def expand_segment_match(matches):
+def expand_hls_segment_match(matches):
     return_matches = []
     for m in matches: 
        parts = m.split('.')
@@ -126,12 +126,12 @@ def expand_segment_match(matches):
  
     return return_matches 
 
-def expand_rule_match(match_part, master_playlist_obj):
+def expand_hls_rule_match(match_part, master_playlist_obj):
     matches = [match_part]
-    return expand_segment_match( expand_bitrate_match(matches, master_playlist_obj) )
+    return expand_hls_segment_match( expand_hls_bitrate_match(matches, master_playlist_obj) )
 
 
-def parse_rules(rule_string, master_playlist_obj = None):
+def parse_hls_rules(rule_string, master_playlist_obj = None):
     rules = {}
 
     if not rule_string:
@@ -149,11 +149,11 @@ def parse_rules(rule_string, master_playlist_obj = None):
 
             match = rule_parts[0].strip()
 
-            if not validate_match_rule_part(match):
+            if not validate_hls_match_rule_part(match):
                 raise ValueError("Rule invalid: " + match)
             
 
-            for r_match in expand_rule_match(match, master_playlist_obj):
+            for r_match in expand_hls_rule_match(match, master_playlist_obj):
                 rules[r_match] = rule_parts[1].strip()
 
     except Exception, err:
@@ -190,7 +190,7 @@ def parse_net_rule_action(rule_action):
     return (traffic_limit, traffic_loss, cache)
 
 
-def segment_rule_rewrite(rules, playlist, segment, shape_session, mock_shape_segment=False):
+def hls_segment_rule_rewrite(rules, playlist, segment, shape_session, mock_shape_segment=False):
     """
 
     Given a set of rules and a segment in a playlist, find out whether the 
@@ -200,7 +200,7 @@ def segment_rule_rewrite(rules, playlist, segment, shape_session, mock_shape_seg
 
     """
     # perform rule matching
-    rule_action = segment_rule_match(rules,playlist, segment)
+    rule_action = hls_segment_rule_match(rules,playlist, segment)
 
     # no rule match    
     if not rule_action:
@@ -211,11 +211,11 @@ def segment_rule_rewrite(rules, playlist, segment, shape_session, mock_shape_seg
         return generate_status(rule_action[1:]) 
 
     if rule_action.startswith("net"):
-        return shape_segment(segment, rule_action, mock_shape_segment=mock_shape_segment, shape_session = shape_session)
+        return shape_hls_segment(segment, rule_action, mock_shape_segment=mock_shape_segment, shape_session = shape_session)
 
     raise ValueError( "Cannot match action against appropriate set of actions : {0}".format(rule_action))      
 
-def segment_rule_match(rules, playlist, segment):
+def hls_segment_rule_match(rules, playlist, segment):
     """
 
     Check if any rule matches the current segment. Generate the playlist/segment possible 
@@ -280,7 +280,7 @@ def call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment):
         if p.returncode != 0:
             raise SystemError('Executing {0} failed with {1}'.format(conf.shaper_path, p.returncode))
 
-def shape_segment(segment, rule_action, mock_shape_segment=False, shape_session = {}):
+def shape_hls_segment(segment, rule_action, mock_shape_segment=False, shape_session = {}):
     """Cache the segment and call the external shaper script"""
 
     sid = hashlib.sha224(conf.data.provider.normalize_segment_url(segment["url"])).hexdigest()
@@ -325,7 +325,7 @@ def update_shaped_segment(url, rule_action, mock_shape_segment=False):
     logging.debug("{0} {1}".format(traffic_limit , traffic_loss))
     call_ext_shape_port(port, traffic_limit, traffic_loss, mock_shape_segment)
 
-def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_url = ''):
+def hls_cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_url = ''):
     """Returns shaped m3u8 playlist
 
     Process and shape a m3u8 playlist based on a set of rules 
@@ -345,7 +345,7 @@ def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_u
             variant_playlist = httpls_client.pull_variant_playlist( variant_playlist_desc["url"])
 
             # perform rewrite on the variant playlist url to local url or a rule matched url 
-            seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist_desc, shape_port_session)
+            seg_rewrite_url = hls_segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist_desc, shape_port_session)
             local_rewrite_url = conf.common.get_final_url("playlist.m3u8","p=m_{0}_{1}_{2}".format(seeded_content_id, bitrate, alt))
             shape_info["variants"]["{0}_{1}".format(bitrate, alt)] = "{0}_{1}_{2}".format(seeded_content_id, bitrate, alt)
             master_playlist = httpls_client.switch_segment( master_playlist, variant_playlist_desc["original_url"], seg_rewrite_url if seg_rewrite_url else local_rewrite_url )
@@ -357,7 +357,7 @@ def cache_and_shape(master_playlist, seeded_content_id, rules, master_playlist_u
 
             # perform rule rewrite on segments within the variant playlist  
             for s in variant_playlist["segments"].iterkeys():
-                seg_rewrite_url = segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist["segments"][s], shape_port_session)
+                seg_rewrite_url = hls_segment_rule_rewrite(rules, variant_playlist_desc, variant_playlist["segments"][s], shape_port_session)
 
                 # rewrite local to full url playlist
                 if variant_playlist["segments"][s]["original_url"] != variant_playlist["segments"][s]["url"]:
