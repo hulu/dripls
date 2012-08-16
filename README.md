@@ -1,10 +1,10 @@
 Summary
 ==========
 
-DripLS - Make a CDN in a box service that is able to perform traffic shaping for testing purposes on a http live stream.
+DripLS - Make a CDN in a box service that is able to perform traffic shaping for testing purposes on a http live stream or a progressive file stream.
 
-Usage
-==========
+Usage - HLS
+===========
 
 	http://dripls-host/cache?authkey=[authkey]&cid=[cid]&tag=[tag]&r=[rules]
 
@@ -228,6 +228,46 @@ Re-shape
       http://dripls-host/updatesegment?authkey=sample&url=http://dripls-host/s/10001/ts.ts?s=e92cc3a7270d48c34398ad894a83d34fb23d9741a01cc16c20290bb8&new_action=net1000
 
 >Now the segment s2 would continue to be streamed at 1000kbs
+
+
+Usage - Progressive
+==========
+
+  http://dripls-host/progressive?url=[url]&r=[rules]
+
+Stream a progressive media stream and shape the stream according to the specified rules. Each rule determines how that section of the media file should be shaped. Rules are not allowed to overlap their byte ranges. 
+
+Rule Format
+==========
+
+Each rule has the following format: byte-range-expression~action. 
+
+Byte Range Expression
+===============
+
+Each rule defines the byte range during which its action is used to shape the stream. The range is defined as an initial byte (zero based) and final byte (inclusive) within the content. When a progressive request is received, we determine based on the requested bytes whether any of the defined rules intersect with this byte range, if they do then the entire byte range will be executed using the specified action. 
+
+__b[num]-[num]__ - A byte offset range for the content. The end offset can be '*' which indicates that it matches until the end of the content. 
+
+
+
+Rule Conflicts
+===============
+Since a rule is defined as a byte range and a single request is likely to be for a different range of bytes, there is the possibility that a single request may intersect with multiple rule definitions. In this case we will choose the action related to the rule with that largest intersection with the requested byte range.
+
+For example, if a rule is defined as b0-1999 and another is defined as 2000-3999 and the request is for bytes=1024-2048 then we will select the action related to the first rule since its intessection (76) is greater than the second rule (48). In the event that they are the same, the rule with the lowest start will be chosen.
+
+Rule Action
+==============
+This is the action to be applied to a byte range, when a matching rule is found for it:
+
+Action
+==================
+__e[http error code]__                                - Replace the playlist's matching segment url with a url that returns the specified response code upon invocation ( ex. e416 ) 
+
+__net[bandwidth in kbit]loss[% of packets dropped]__  - The net rule action, when applied to a byte range, causes the stream to be served at 
+                                                        [bandwidth in kbit]  with [% of packets dropped]  ( ex. net200loss10 - serve the matched data at 200kbit
+                                                        max with 10% packet loss during transmission)
 
 License
 ==========

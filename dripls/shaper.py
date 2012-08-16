@@ -15,10 +15,12 @@ import re
 import conf.data
 import conf
 import httpls_client
+import progressive
 
 #port shaping queue
 port_queue = Queue.Queue()
 shaper_store_path = "{0}/".format(os.path.dirname(os.path.realpath(__file__)))
+
 
 def get_next_shape_port():
    if port_queue.empty():
@@ -50,8 +52,8 @@ def generate_status(status):
 def validate_hls_match_rule_part(part):
     parts = part.split('.')
     if len(parts) > 3:
-	return False
-   
+        return False
+
     #check segment part
     if (len(parts) > 1 and 
         not parts[-1][-1] == "k" and 
@@ -65,7 +67,7 @@ def validate_hls_match_rule_part(part):
             invalid_part = not (range[0].isdigit() and range[1].isdigit())
 
         if invalid_part:
-	    return False
+            return False
 
     #check playlist part
     if len(parts) == 1 and parts[-1][-1] != "k" and parts[-1][-1] != "*":
@@ -78,6 +80,10 @@ def validate_hls_match_rule_part(part):
         return False       
 
     return True
+
+def validate_action_part(part):
+    if not (part.startswith("e") or part.startswith("net")):
+        raise ValueError("Unable to parse rule action {0}".format(part)) 
 
 def expand_hls_bitrate_match(matches, master_playlist_obj):
     if not master_playlist_obj:
@@ -130,6 +136,8 @@ def expand_hls_rule_match(match_part, master_playlist_obj):
     matches = [match_part]
     return expand_hls_segment_match( expand_hls_bitrate_match(matches, master_playlist_obj) )
 
+def parse_prog_rules(rule_string):
+    return progressive.from_rules(rule_string)
 
 def parse_hls_rules(rule_string, master_playlist_obj = None):
     rules = {}
@@ -144,14 +152,12 @@ def parse_hls_rules(rule_string, master_playlist_obj = None):
             rule_parts = rule.strip().split("~")
              
             action = rule_parts[1].strip()
-            if not (action.startswith("e") or action.startswith("net")):
-                raise ValueError("Unable to parse rule action {0}".format(action)) 
 
+            validate_action_part(action)
             match = rule_parts[0].strip()
 
             if not validate_hls_match_rule_part(match):
                 raise ValueError("Rule invalid: " + match)
-            
 
             for r_match in expand_hls_rule_match(match, master_playlist_obj):
                 rules[r_match] = rule_parts[1].strip()

@@ -12,6 +12,7 @@ from cherrypy.lib import httputil
 
 import conf.data
 import httpls_client
+import progressive
 import shaper
 
 import conf
@@ -46,29 +47,14 @@ class DriplsController(object):
     def stream_ts(self, p=None, **kwargs):
         """ Stream a ts from original location """
 
-        import socket
-        socket._fileobject.default_bufsize = 0
-
         serving_request = cherrypy.serving.request
         if serving_request.protocol >= (1, 1):
             r = httputil.get_ranges(serving_request.headers.get('Range'), sys.maxint)
 
             # TODO : do something with range request if need be
        
-        req = urllib2.Request(kwargs['url'])
-        for header in serving_request.headers:
-             if header not in ['Range','Accept','User-Agent']:
-                  continue
-             req.headers[header] = serving_request.headers.get(header)
-        ts = urllib2.urlopen(req)
-
-        for h in ts.headers.keys():
-            cherrypy.response.headers[h] = ts.headers[h]
-
-        buffer = '_'
-        while len(buffer) > 0:
-          buffer = ts.read(30*1024)
-          yield buffer
+        for bytes in self._stream_url(serving_request, url):
+            yield bytes
    
     @cherrypy.expose
     def updatesegment(self, url, new_action):
@@ -161,6 +147,62 @@ class DriplsController(object):
 
         return master_content
 
+    @cherrypy.expose
+    def progressive(self, url, r=None, **kwargs):
+        """ Endpoint for shaping a progressive stream"""
+
+        stream_url = url
+        if not kwargs.has_key("from_dripls"):
+            # if we have already come from dripls, we will set from_dripls so we can bypass the rule matching since we are 
+            # running through a net traffic rule
+            if r:
+                stream_url = self._handle_progressive_rules(stream_url, r, cherrypy.serving.request)
+
+        for bytes in self._stream_url(cherrypy.serving.request, stream_url):
+            yield bytes
+
+    def _handle_progressive_rules(self, url, rules, request, mock_shape_segment=True):
+        stream_url = url
+        matcher = progressive.from_rules(rules)
+
+        if 'Range' in request.headers:
+            ranges = httputil.get_ranges(request.headers.get('Range'), sys.maxint)
+            if ranges:
+                # can return multiple ranges
+                # assume 1 for now
+                action = matcher.get_action(ranges[0][0], ranges[0][1] -1) # make range inclusive
+        else:
+            # this is fetching an entire file, so this should be the same as matching 0-*
+            action = matcher.get_action(0, sys.maxint)
+        if action:
+            if action.startswith("e"):
+                self.ostatus(action[1:]) 
+            else:
+                (traffic_limit, traffic_loss, cache) = shaper.parse_net_rule_action(action)
+                port = shaper.get_shape_port_for(traffic_limit, traffic_loss, {}, mock_shape_segment)
+                stream_url=conf.common.get_final_url("/s/{0}/progressive?url={1}&from_dripls=1".format(port, urllib.quote_plus(url)),"")
+        return stream_url
+
+
+    def _stream_url(self, request, url):
+        import socket
+        socket._fileobject.default_bufsize = 0
+
+        req = urllib2.Request(url)
+        for header in request.headers:
+             if header not in ['Range','Accept','User-Agent']:
+                  continue
+             req.headers[header] = request.headers.get(header)
+        content = urllib2.urlopen(req)
+        for h in content.headers.keys():
+            cherrypy.response.headers[h] = content.headers[h]
+        cherrypy.response.status = content.code
+
+        buffer = '_'
+        while len(buffer) > 0:
+          buffer = content.read(30*1024)
+          yield buffer
+
 
     def cache_stream(self, cid=None, r=None, tag=None, kwargs=None):
         """ Perform the actual caching and shaping  of the stream """
@@ -193,6 +235,20 @@ class DriplsController(object):
 
         with open("{0}/playlists/tag_{1}".format(shaper.shaper_store_path, tag), "w") as pf:
             pf.write("{0}".format(urllib.urlencode(tag_args)))
+
+    @cherrypy.expose
+    def s(self, port, action, **kwargs):
+        """This can simulate the streaming calls through the net rule ports for testing"""
+        if action == 'progressive':
+            for bytes in self.progressive(**kwargs):
+                yield bytes
+        elif action == 'stream_ts':
+            for bytes in self.stream_ts(**kwargs):
+                yield bytes
+        else:
+            raise cherrypy.HTTPError(400, message="Invalid action specified")
+
+
   
 conf.dripls_main_site_url = conf.app['root_url']
 root = DriplsController()

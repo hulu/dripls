@@ -24,6 +24,6 @@ pip-log.txt
 .coverage
 .tox
 lint.xml
-
-
+cover
+bin/dripls.pid
 test/playlists/*
