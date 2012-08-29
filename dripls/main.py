@@ -150,7 +150,6 @@ class DriplsController(object):
     @cherrypy.expose
     def progressive(self, url, r=None, **kwargs):
         """ Endpoint for shaping a progressive stream"""
-
         stream_url = url
         if not kwargs.has_key("from_dripls"):
             # if we have already come from dripls, we will set from_dripls so we can bypass the rule matching since we are 
@@ -187,21 +186,22 @@ class DriplsController(object):
     def _stream_url(self, request, url):
         import socket
         socket._fileobject.default_bufsize = 0
-
         req = urllib2.Request(url)
         for header in request.headers:
-             if header not in ['Range','Accept','User-Agent']:
-                  continue
-             req.headers[header] = request.headers.get(header)
+            if header not in ['Range','Accept','User-Agent']:
+                continue
+            req.headers[header] = request.headers.get(header)
         content = urllib2.urlopen(req)
+        cherrypy.response.status = content.code
         for h in content.headers.keys():
             cherrypy.response.headers[h] = content.headers[h]
-        cherrypy.response.status = content.code
-
+        
+        # Ensure that the headers and status code are being reflected in the response
+        cherrypy.response.finalize()
         buffer = '_'
         while len(buffer) > 0:
-          buffer = content.read(30*1024)
-          yield buffer
+            buffer = content.read(30*1024)
+            yield buffer
 
 
     def cache_stream(self, cid=None, r=None, tag=None, kwargs=None):
@@ -248,7 +248,6 @@ class DriplsController(object):
         else:
             raise cherrypy.HTTPError(400, message="Invalid action specified")
 
-
   
 conf.dripls_main_site_url = conf.app['root_url']
 root = DriplsController()
@@ -264,7 +263,17 @@ app_config = {
              'wvm': 'text/plain',
              'm3u8': 'application/vnd.apple.mpegurl'
          }
-    }
+    },
+    # Need to disable encoding for these non-unicode streaming data services. 
+     '/progressive': {
+         'tools.encode.on': False,
+     },
+    '/stream_ts': {
+         'tools.encode.on': False,
+     },
+     '/': {
+         'tools.encode.on': False,
+     }
 }
     
 cherrypy.config.update({
