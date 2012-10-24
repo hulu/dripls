@@ -53,7 +53,7 @@ class DriplsController(object):
 
             # TODO : do something with range request if need be
        
-        for bytes in self._stream_url(serving_request, url):
+        for bytes in self._stream_url(serving_request, kwargs.get("url")):
             yield bytes
    
     @cherrypy.expose
